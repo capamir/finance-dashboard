@@ -10,7 +10,7 @@ export default function DashboardPage() {
   const transactions = mockTransactions;
 
   return (
-    <div className="container relative py-6">
+    <div className="container relative py-6 mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <Button>Add Transaction</Button>
