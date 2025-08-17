@@ -62,7 +62,6 @@ export function AddTransactionSheet({
 }: AddTransactionSheetProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // --- React Hook Form Initialization ---
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
@@ -73,38 +72,39 @@ export function AddTransactionSheet({
     },
   });
 
-  /**
-   * Handles the form submission process.
-   * @param {TransactionFormData} values - The validated form data.
-   */
   function onSubmit(values: TransactionFormData) {
     const amount =
       parseFloat(values.amount) * (values.type === "expense" ? -1 : 1);
 
     const newTransaction: Transaction = {
-      id: `txn_${Date.now()}`, // Simple unique ID for now
+      id: `txn_${Date.now()}`,
       ...values,
       amount,
-      date: values.date, // Ensure date is a Date object
+      date: values.date,
     };
 
     onTransactionAdded(newTransaction);
-    form.reset(); // Reset form fields to default values
-    setIsOpen(false); // Close the sheet
+    form.reset();
+    setIsOpen(false);
   }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent>
+      <SheetContent className="px-7">
         <SheetHeader>
           <SheetTitle>Add a New Transaction</SheetTitle>
           <SheetDescription>
             Enter the details of your transaction below.
           </SheetDescription>
         </SheetHeader>
+        {/* The Form provider wraps the form but doesn't render a DOM element */}
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* The form now has a dedicated scrollable area with padding */}
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 py-4"
+          >
             {/* Description Field */}
             <FormField
               control={form.control}
@@ -204,12 +204,16 @@ export function AddTransactionSheet({
                 </FormItem>
               )}
             />
-
-            <SheetFooter className="pt-4">
-              <Button type="submit">Add Transaction</Button>
-            </SheetFooter>
           </form>
         </Form>
+        {/* The footer is now outside the form, at the bottom of the sheet */}
+        <SheetFooter className="gap-3">
+          {/* This button programmatically triggers the form submission */}
+          <Button onClick={form.handleSubmit(onSubmit)}>Add Transaction</Button>
+          <SheetClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </SheetClose>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
