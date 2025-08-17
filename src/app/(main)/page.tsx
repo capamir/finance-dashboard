@@ -7,70 +7,83 @@ import { Button } from "@/components/ui/button";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
 import { TransactionSheet } from "@/components/dashboard/TransactionSheet";
+import { TransactionTableFilters } from "@/components/dashboard/TransactionTableFilters";
 import { mockTransactions } from "@/data/mock-data";
 import { Transaction } from "@/types";
 
 /**
  * The main dashboard page for the application.
- * This is a Client Component to manage the state of transactions.
+ * This is a Client Component to manage the state of transactions and filters.
  */
 export default function DashboardPage() {
+  // --- Main Data State ---
   const [transactions, setTransactions] =
     React.useState<Transaction[]>(mockTransactions);
 
-  /**
-   * Handles adding a new transaction or updating an existing one.
-   * Checks if a transaction with the given ID already exists.
-   * @param {Transaction} transactionData - The new or updated transaction object.
-   */
-  const handleSaveTransaction = (transactionData: Transaction) => {
-    setTransactions((prevTransactions) => {
-      const existingIndex = prevTransactions.findIndex(
-        (t) => t.id === transactionData.id
-      );
+  // --- Filter States ---
+  const [descriptionFilter, setDescriptionFilter] = React.useState("");
+  const [typeFilter, setTypeFilter] = React.useState("all"); // 'all', 'income', or 'expense'
 
+  // --- State Management Handlers ---
+  const handleSaveTransaction = (transactionData: Transaction) => {
+    setTransactions((prev) => {
+      const existingIndex = prev.findIndex((t) => t.id === transactionData.id);
       if (existingIndex > -1) {
-        // --- UPDATE ---
-        // Create a new array and update the specific transaction at its index.
-        const updatedTransactions = [...prevTransactions];
-        updatedTransactions[existingIndex] = transactionData;
-        return updatedTransactions;
-      } else {
-        // --- ADD ---
-        // Return a new array with the new transaction at the beginning.
-        return [transactionData, ...prevTransactions];
+        const updated = [...prev];
+        updated[existingIndex] = transactionData;
+        return updated;
       }
+      return [transactionData, ...prev];
     });
   };
 
-  /**
-   * Handles deleting a transaction from the state by its ID.
-   * @param {string} transactionId - The ID of the transaction to delete.
-   */
   const handleDeleteTransaction = (transactionId: string) => {
-    setTransactions((prevTransactions) =>
-      // Filter out the transaction with the matching ID.
-      prevTransactions.filter((t) => t.id !== transactionId)
-    );
+    setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
   };
+
+  // --- Derived State for Filtering ---
+  // This computes the filtered list on every render based on the current filter state.
+  const filteredTransactions = React.useMemo(() => {
+    return transactions.filter((transaction) => {
+      // Description filter (case-insensitive)
+      const descriptionMatch = transaction.description
+        .toLowerCase()
+        .includes(descriptionFilter.toLowerCase());
+
+      // Type filter
+      const typeMatch = typeFilter === "all" || transaction.type === typeFilter;
+
+      return descriptionMatch && typeMatch;
+    });
+  }, [transactions, descriptionFilter, typeFilter]);
 
   return (
     <div className="container relative py-6 mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        {/* This TransactionSheet is for ADDING new transactions */}
         <TransactionSheet onSave={handleSaveTransaction}>
           <Button>Add Transaction</Button>
         </TransactionSheet>
       </div>
 
+      {/* Summary cards now show data for the *filtered* transactions */}
       <div className="mb-6">
-        <SummaryCards transactions={transactions} />
+        <SummaryCards transactions={filteredTransactions} />
       </div>
 
-      {/* Pass the new handler functions down to the table */}
+      {/* Add the new filter component */}
+      <div className="mb-6">
+        <TransactionTableFilters
+          description={descriptionFilter}
+          onDescriptionChange={setDescriptionFilter}
+          type={typeFilter}
+          onTypeChange={setTypeFilter}
+        />
+      </div>
+
+      {/* The table now displays the *filtered* transactions */}
       <TransactionsTable
-        data={transactions}
+        data={filteredTransactions}
         onDelete={handleDeleteTransaction}
         onSave={handleSaveTransaction}
       />
