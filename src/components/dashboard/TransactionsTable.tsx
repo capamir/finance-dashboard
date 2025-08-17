@@ -23,16 +23,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Transaction } from "@/types";
+import { TransactionSheet } from "./TransactionSheet";
+import { DeleteTransactionDialog } from "./DeleteTransactionDialog";
 
+/**
+ * Props for the TransactionsTable component.
+ * @property {Transaction[]} data - An array of transaction objects to display.
+ * @property {(id: string) => void} onDelete - Callback to delete a transaction.
+ * @property {(transaction: Transaction) => void} onSave - Callback to save (update) a transaction.
+ */
 type TransactionsTableProps = {
   data: Transaction[];
+  onDelete: (id: string) => void;
+  onSave: (transaction: Transaction) => void;
 };
 
 /**
  * A client component that renders a table of financial transactions.
+ * It includes features like action menus for each row and styled badges for categories.
+ * @param {TransactionsTableProps} props - The component props.
+ * @returns {React.ReactElement} A card containing a responsive data table.
  */
-export function TransactionsTable({ data }: TransactionsTableProps) {
-  // --- Formatting Helpers ---
+export function TransactionsTable({
+  data,
+  onDelete,
+  onSave,
+}: TransactionsTableProps) {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -93,8 +109,23 @@ export function TransactionsTable({ data }: TransactionsTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Delete</DropdownMenuItem>
+                      {/* Edit Action */}
+                      <TransactionSheet
+                        onSave={onSave}
+                        initialData={transaction}
+                      >
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          Edit
+                        </DropdownMenuItem>
+                      </TransactionSheet>
+                      {/* Delete Action */}
+                      <DeleteTransactionDialog
+                        onDelete={() => onDelete(transaction.id)}
+                      >
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          Delete
+                        </DropdownMenuItem>
+                      </DeleteTransactionDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

@@ -43,69 +43,95 @@ import { Transaction } from "@/types";
 /**
  * Props for the AddTransactionSheet component.
  * @property {React.ReactNode} children - The trigger element for the sheet.
- * @property {(transaction: Transaction) => void} onTransactionAdded - Callback to execute when a new transaction is successfully submitted.
+ * @property {(transaction: Transaction) => void} onSave - Callback to execute when a transaction is saved (added or updated).
+ * @property {Transaction | null} [initialData] - Optional transaction data to pre-fill the form for editing.
  */
-type AddTransactionSheetProps = {
+type TransactionSheetProps = {
   children: React.ReactNode;
-  onTransactionAdded: (transaction: Transaction) => void;
+  onSave: (transaction: Transaction) => void;
+  initialData?: Transaction | null;
 };
 
 /**
- * A client component that provides a form within a side sheet for adding new transactions.
+ * A client component that provides a form within a side sheet for adding or editing transactions.
  * It handles form state, validation, and submission.
- * @param {AddTransactionSheetProps} props - The component props.
+ * @param {TransactionSheetProps} props - The component props.
  * @returns {React.ReactElement} The sheet component with the transaction form.
  */
-export function AddTransactionSheet({
+export function TransactionSheet({
   children,
-  onTransactionAdded,
-}: AddTransactionSheetProps) {
+  onSave,
+  initialData,
+}: TransactionSheetProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+
+  // --- Determine Mode ---
+  const isEditMode = !!initialData;
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionFormSchema),
-    defaultValues: {
-      description: "",
-      amount: "",
-      type: "expense",
-      date: new Date(),
-    },
   });
 
+  // --- Effect to pre-fill form in Edit Mode ---
+  React.useEffect(() => {
+    if (isEditMode) {
+      form.reset({
+        description: initialData.description,
+        // Convert amount to a positive string for the input field
+        amount: String(Math.abs(initialData.amount)),
+        date: initialData.date,
+        type: initialData.type,
+        category: initialData.category,
+      });
+    } else {
+      // Reset to default values for Add Mode
+      form.reset({
+        description: "",
+        amount: "",
+        type: "expense",
+        date: new Date(),
+        category: undefined, // Ensure category is cleared
+      });
+    }
+  }, [initialData, isEditMode, form]);
+
+  /**
+   * Handles the form submission process for both adding and editing.
+   * @param {TransactionFormData} values - The validated form data.
+   */
   function onSubmit(values: TransactionFormData) {
     const amount =
       parseFloat(values.amount) * (values.type === "expense" ? -1 : 1);
 
-    const newTransaction: Transaction = {
-      id: `txn_${Date.now()}`,
+    const transactionData: Transaction = {
+      // If editing, use the existing ID; otherwise, create a new one.
+      id: isEditMode ? initialData.id : `txn_${Date.now()}`,
       ...values,
       amount,
       date: values.date,
     };
 
-    onTransactionAdded(newTransaction);
-    form.reset();
+    onSave(transactionData);
     setIsOpen(false);
   }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent className="px-7">
+      <SheetContent>
         <SheetHeader>
-          <SheetTitle>Add a New Transaction</SheetTitle>
+          <SheetTitle>
+            {isEditMode ? "Edit Transaction" : "Add a New Transaction"}
+          </SheetTitle>
           <SheetDescription>
-            Enter the details of your transaction below.
+            {isEditMode
+              ? "Update the details of your transaction below."
+              : "Enter the details of your transaction below."}
           </SheetDescription>
         </SheetHeader>
-        {/* The Form provider wraps the form but doesn't render a DOM element */}
         <Form {...form}>
-          {/* The form now has a dedicated scrollable area with padding */}
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="grid gap-4 py-4"
-          >
-            {/* Description Field */}
+          <form className="grid gap-4 py-4">
+            {/* Form fields remain the same */}
             <FormField
               control={form.control}
               name="description"
@@ -119,8 +145,6 @@ export function AddTransactionSheet({
                 </FormItem>
               )}
             />
-
-            {/* Amount Field */}
             <FormField
               control={form.control}
               name="amount"
@@ -134,8 +158,6 @@ export function AddTransactionSheet({
                 </FormItem>
               )}
             />
-
-            {/* Date Field */}
             <FormField
               control={form.control}
               name="date"
@@ -149,8 +171,6 @@ export function AddTransactionSheet({
                 </FormItem>
               )}
             />
-
-            {/* Type Field */}
             <FormField
               control={form.control}
               name="type"
@@ -175,8 +195,6 @@ export function AddTransactionSheet({
                 </FormItem>
               )}
             />
-
-            {/* Category Field */}
             <FormField
               control={form.control}
               name="category"
@@ -206,10 +224,10 @@ export function AddTransactionSheet({
             />
           </form>
         </Form>
-        {/* The footer is now outside the form, at the bottom of the sheet */}
-        <SheetFooter className="gap-3">
-          {/* This button programmatically triggers the form submission */}
-          <Button onClick={form.handleSubmit(onSubmit)}>Add Transaction</Button>
+        <SheetFooter>
+          <Button onClick={form.handleSubmit(onSubmit)}>
+            {isEditMode ? "Save Changes" : "Add Transaction"}
+          </Button>
           <SheetClose asChild>
             <Button variant="outline">Cancel</Button>
           </SheetClose>
